@@ -1,0 +1,50 @@
+commit fd251610c3ec3af17bdea96f1627b7e493a85462
+Author: Stanley Miao <stanley@shannon-data.com>
+Date:   Mon Mar 13 11:18:57 2017 +0800
+
+    Release 2.9.0
+    
+    1, support 12.8T.
+    2, add read disturb handling.
+    3, auto reset link width to max link width.
+    4, add bounce buffer for 8-bytes nonaligned ios.
+    5, fix io statistics bug.
+    
+    Signed-off-by: Stanley Miao <stanley@shannon-data.com>
+
+commit bdd2a83edbd20befa17c5531a76489487cd89ef3
+Author: Zheng Lv <lvzheng@shannon-data.com>
+Date:   Tue Mar 21 11:17:34 2017 +0800
+
+    fix old fashion on bounce buffer allocated failure
+    
+    this is based on rc branch commit id
+    42c83240904af6fa2e30a0fe60e3af712f3f0013
+    "bounce buffer when bio_vec is not 8 byte aligned"
+    
+    when bounce buffers fail to allocate, the old fashion
+    way needs to take this sbio has_hole=1, just like the
+    original logic does.
+    
+    Signed-off-by: Zheng Lv <lvzheng@shannon-data.com>
+
+commit dedc427009cf42d635380d7b41ef841ded4b0a8e
+Author: Stanley Miao <stanley@shannon-data.com>
+Date:   Fri Mar 17 15:51:17 2017 +0800
+
+    remove L06B flashid
+    
+    Flashid is read from nor flash on SSD with L06B flash.
+    
+    Signed-off-by: Stanley Miao <stanley@shannon-data.com>
+
+commit f00c1451aef7847e905c6829f44d68a27b403211
+Author: Stanley Miao <stanley@shannon-data.com>
+Date:   Fri Mar 17 15:47:31 2017 +0800
+
+    fix is_valid_id
+    
+    When flashid is read from nor flash, we can not compare it with
+    supported_ids[].
+    
+    Signed-off-by: Stanley Miao <stanley@shannon-data.com>

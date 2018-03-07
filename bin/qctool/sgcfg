@@ -1,0 +1,5 @@
+[global]
+shannon_init_loops=30
+ali_init_loops=50
+estimated_life_left=97
+driver_version=3.2.0.101

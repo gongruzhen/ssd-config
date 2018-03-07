@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# this script can print the vth for Hynix V2
+
+lun=$1
+sblk=$2
+wl=$3
+step=$4
+
+#test_blk=$((sblk*2+1))
+
+apptool=./ztool
+g_cfg="--dev=a"
+cfg="-pN -B"
+
+usage()
+{
+	echo "Usage:"
+	echo -e "\t./bit_distribution lun sblk page vth-step"
+}
+
+handle_low_range()
+{
+	low_vth=-0.6
+	page_bit_cnt_pre=0
+	for ((vth = 0x0; vth <= 0xFF; vth += $step)); do
+		vth16=$(echo "obase=16; $vth" | bc)
+		$apptool $g_cfg vth-read 0 $vth16 $lun
+		page_bit_cnt_cur=$($apptool $g_cfg --silent --disable-ecc pslc-read $lun $sblk $wl $cfg)
+		#echo $apptool $g_cfg --silent --disable-ecc pslc-read $lun $sblk $wl $cfg
+		#exit 1
+
+
+		if (($vth == 0x0)); then
+			#echo -e "$low_vth\t$page_bit_cnt_cur"
+			echo "$page_bit_cnt_cur"
+		else
+			Delta=$((page_bit_cnt_cur - page_bit_cnt_pre))
+			low_vth=$(printf "%.2f" `echo "scale=2; $low_vth+0.02*$step" | bc`)
+			if (($vth > 0x67 && $vth < 0x6D )); then
+				continue
+			fi
+
+			#echo -e "$low_vth\t$Delta"
+			echo "$Delta"
+		fi
+
+		page_bit_cnt_pre=$page_bit_cnt_cur
+	done
+
+	g_page_bit_cnt_pre=$page_bit_cnt_pre;
+}
+
+handle_high_range()
+{
+	high_vth=3.11
+	for ((vth = 0x7A; vth <= 0xFF; vth += $step)); do
+		vth16=$(echo "obase=16; $vth" | bc)
+		$apptool $g_cfg vth-read 1 $vth16 $lun
+		page_bit_cnt_cur=$($apptool $g_cfg --silent --disable-ecc pslc-read $lun $sblk $wl $cfg)
+
+		if (($vth == 0x7A)); then
+			Delta=$((page_bit_cnt_cur - g_page_bit_cnt_pre))
+		else
+			Delta=$((page_bit_cnt_cur - page_bit_cnt_pre))
+		fi
+
+		#echo -e "$high_vth\t$Delta"
+		echo "$Delta"
+		high_vth=$(printf "%.2f" `echo "scale=2; $high_vth+0.02*$step" | bc`)
+
+		page_bit_cnt_pre=$page_bit_cnt_cur
+	done
+}
+
+set_def_val()
+{
+	$apptool $g_cfg vth-read def $lun
+}
+
+# main entry
+if [ $# -ne 4 ]; then
+	usage;
+	exit $#
+fi
+
+handle_low_range;
+handle_high_range;
+set_def_val;

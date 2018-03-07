@@ -1,0 +1,18 @@
+#!/bin/bash
+
+APPTOOL="./ztool"
+
+[ $# -lt 1 ] && echo "Usage: `basename $0` devnod [off]" && exit 1
+
+devnod=$1
+[[ ! -c $devnod ]] && echo "No such device: $devnod" && exit 1
+
+x=`$APPTOOL --dev=$devnod utils peek-regs 0xC0 1 | awk '{print "0x"$2}'`
+y=`printf %x $(($x | 0x40000000))`
+z=`printf %x $(($x & 0xBFFFFFFF))`
+
+if [[ $2 = "off" ]]; then
+	$APPTOOL --dev=$devnod utils poke-regs 0xC0 $z
+else
+	$APPTOOL --dev=$devnod utils poke-regs 0xC0 $y
+fi

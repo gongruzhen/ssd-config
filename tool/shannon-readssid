@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# David Miao, david@shannon-data.com
+
+die() {
+	echo -ne "\033[0;1;31m$@\033[0m\n"
+	exit 1
+}
+
+usage() {
+	echo -ne "Usage:\n"
+	echo -ne "\t`basename $0` -d device[a, b, c...]\n"
+	echo -ne "\t`basename $0` -f fmw-file\n"
+}
+
+read_fmw_ssid() {
+	f=$1
+	[ ! -e $f ] && die "No such file: $f"
+
+	magic=`hexdump -e '1/4 "%08X" ""' -s 0 -n 4 $f`
+	version=`hexdump -e '1/4 "%d" ""' -s 8 -n 4 $f`
+	ssid=`hexdump -e '1/2 "%04X" ""' -s 68 -n 2 $f`
+
+	if [ $magic != "77696E62" ] && [ $magic != "77696e62" ]; then
+		die "$f is Not shannon firmware file"
+	fi
+	# echo $magic, $version, $ssid
+
+	if [ $version -lt 1802 ]; then
+		die "firmware version $version has no subsystemid included"
+	fi
+	echo "0x$ssid"
+}
+
+read_dev_ssid() {
+	dev="/dev/df$1"
+	[ ! -b $dev ] && die "No such block device: $dev"
+
+	sysfs_dv="/sys/block/df$1/shannon/driver_version"
+	[ -e $sysfs_dv ] && dv=`cat $sysfs_dv`
+
+	sysfs_ssid="/sys/block/df$1/shannon/pci_info/subsystem_device_id"
+	[ ! -e $sysfs_ssid ] && die "shannon driver version $dv has no subsystemid in sysfs"
+
+	ssid=`cat $sysfs_ssid`
+	echo $ssid
+}
+
+if [ $# -ne 2 ]; then
+	usage
+	exit 1
+fi
+
+if [ $1 == "-d" ]; then
+	read_dev_ssid $2
+elif [ $1 == "-f" ]; then
+	read_fmw_ssid $2
+else
+	usage
+fi

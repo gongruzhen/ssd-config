@@ -1,0 +1,79 @@
+#!/usr/bin/python -u
+
+#init david.miao 20160602
+
+import os
+import sys
+import getopt
+
+def usage():
+	print 'NOTE:'
+	print '\tThis tool is develeped only for R&D!'
+
+	print 'Usage:'
+	print '\t%s [rnd-options] <mode> [-tFL1,FL2...] [devnodes]' % sys.argv[0].strip('./')
+
+	print 'mode:'
+	print '\t-n dev, format new devices'
+	print '\t-u dev, format used devices with resident MBR info'
+	print '\t-f dev, format used devices without resident MBR info'
+	print "\t-l [dev], list devices"
+	print "\t-i dev, do ifmode then exit"
+	print "\t-M dev, display MBR then exit"
+	print "\t-B dev, display BBT then exit"
+	print "\t-w dev, display board details then exit"
+
+	print 'rnd-options:'
+	print '\t--fblocks=N, use N instead of flash actual blocks number'
+	print '\t--initloops=N, set init loops instead default value none'
+	print '\t--ifmodeloops=N, set ifmode loops instead of default value 1'
+
+try:
+	options, args = getopt.gnu_getopt(sys.argv[1:], 'nufilMBwt:Z:Y:X:', 
+		['new', 'used', 'force', 'ifmode',
+		 'list', 'MBR', 'BBT', 'info', 'absentlun=',
+		 'fblocks=', 'initloops=', 'ifmodeloops='])
+except getopt.GetoptError:
+	usage()
+	sys.exit(1)
+
+mode = ''
+topt = ''
+rndopt = ''
+modeflag = False
+
+for name, value in options:
+	if name in ('-n', '-u', '-f', '-l', '-i', '-M', '-B', '-w'):
+		if not modeflag:
+			mode = name;
+			modeflag = True
+		else:
+			usage()
+			sys.exit(1)
+	elif name == '-t':
+		topt = '-t%s' % value
+	elif name in ['--fblocks', '--initloops', '--ifmodeloops']:
+		rndopt += ' %s=%s' % (name, value)
+
+if not mode:
+	usage()
+	sys.exit(1)
+
+if mode != '-l':
+	if len(args) != 1:
+		usage()
+		sys.exit(1)
+
+if rndopt.find('--ifmodeloops') == -1:
+	rndopt += ' --ifmodeloops=1'
+if rndopt.find('--initloops') == -1:
+	rndopt += ' --initloops=none'
+rndopt = rndopt.strip()
+
+s = '%s %s %s' % (mode, topt, ' '.join(args))
+baseopt = ' '.join(s.split())
+
+if os.system('./autompt.py --bdfile=rndboard --nodatabase --autobdtype %s %s' % (rndopt, baseopt)):
+	sys.exit(1)
+else:
+	sys.exit(0)

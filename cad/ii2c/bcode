@@ -1,0 +1,42 @@
+_iloop_ 0 0
+_oloop_ 1 4
+i2c_slave u_i2c_slave_^(
+   .clk(clk_400m),
+   .clk_10m(clk_10m),
+   .rst_n(rst_n_400m),
+   .rst_n_10m(rst_n_10m),
+   .i2c_sda_i(sda_d),
+   .i2c_sda_e_n(i2c_sda_e_n_^),
+   .i2c_scl_i(scl_d),
+   .i2c_scl_e_n(i2c_scl_e_n_^),
+   .i2cclkctl(i2cclkctl),
+   .i2c_filter_en(i2c_filter_en),
+   .i2c_slvaddr(i2c_slvaddr_mux_^),
+   .i2c_active(i2c_active_^),
+   .apb_clk_fouten(apb_clken_del[`APB_CLKEN_DEL_LEN-1]),
+   //ram bus
+   .ram_addr_i2c(ram_addr_i2c_^),
+   .ram_we_i2c(ram_we_i2c_^),
+   .ram_datain_i2c(ram_datain_i2c_^),
+   .ram_ready_i2c(ram_ready_i2c_^),
+   .ram_enable_i2c(ram_enable_i2c_^),
+   .ram_dataout_i2c(ram_dataout_i2c_^),
+   //host bus
+   .host_addr_i2c(),
+   .host_be_i2c(),
+   .host_datain_i2c(0),
+   .host_req_i2c(),
+   .host_ack_i2c(0),
+   .host_dataout_i2c(),
+   //apb bus
+   .i2cPADDR_O(),
+   .i2cPENABLE_O_10m(),
+   .i2cPWRITE_O(),
+   .i2cPWDATA_O(),
+   .i2cPREADY(0),
+   .i2cPRDATA(0),
+   .i2cPSTRB_O(),
+
+   .i2cPSEL_O()
+);
+

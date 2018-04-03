@@ -1,0 +1,8 @@
+_iloop_ 0 7
+_oloop_ 0 3
+  else if (current_state==`DATA_OUT && i2c_scl_i_neg && byte_counter==^) begin
+    case(bit_counter)
+      3'h%: i2c_sda_e_reg <= apb2data_^[%];
+      default:;
+    endcase
+  end

@@ -1,0 +1,14 @@
+_iloop_ 0 0
+_oloop_ 0 4
+reg_file u_reg_file_^(
+   .clk(clk_400m),
+   .rst_n(rst_n_400m),
+   .debug_in(debug_in_reg_file_^),
+   .debug_out(debug_out_^),
+   .ram_addr(ram_addr_i2c_^[15:0]),
+   .ram_we(ram_we_i2c_^),
+   .ram_dataout(ram_datain_i2c_^),
+   .ram_enable(ram_enable_i2c_^),
+   .ram_datain(ram_dataout_i2c_^)
+);
+

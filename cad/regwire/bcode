@@ -1,0 +1,8 @@
+_iloop_ 0 0
+_oloop_ 0 4
+wire [31:0] ram_addr_i2c_^;
+wire        ram_we_i2c_^;
+wire        ram_enable_i2c_^;
+wire [31:0] ram_dataout_i2c_^;
+wire [31:0] ram_datain_i2c_^;
+wire ram_ready_i2c_^ = ram_ready_i2c;

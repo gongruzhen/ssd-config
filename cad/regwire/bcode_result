@@ -1,0 +1,35 @@
+wire [31:0] ram_addr_i2c_0;
+wire        ram_we_i2c_0;
+wire        ram_enable_i2c_0;
+wire [31:0] ram_dataout_i2c_0;
+wire [31:0] ram_datain_i2c_0;
+wire ram_ready_i2c_0 = ram_ready_i2c;
+
+wire [31:0] ram_addr_i2c_1;
+wire        ram_we_i2c_1;
+wire        ram_enable_i2c_1;
+wire [31:0] ram_dataout_i2c_1;
+wire [31:0] ram_datain_i2c_1;
+wire ram_ready_i2c_1 = ram_ready_i2c;
+
+wire [31:0] ram_addr_i2c_2;
+wire        ram_we_i2c_2;
+wire        ram_enable_i2c_2;
+wire [31:0] ram_dataout_i2c_2;
+wire [31:0] ram_datain_i2c_2;
+wire ram_ready_i2c_2 = ram_ready_i2c;
+
+wire [31:0] ram_addr_i2c_3;
+wire        ram_we_i2c_3;
+wire        ram_enable_i2c_3;
+wire [31:0] ram_dataout_i2c_3;
+wire [31:0] ram_datain_i2c_3;
+wire ram_ready_i2c_3 = ram_ready_i2c;
+
+wire [31:0] ram_addr_i2c_4;
+wire        ram_we_i2c_4;
+wire        ram_enable_i2c_4;
+wire [31:0] ram_dataout_i2c_4;
+wire [31:0] ram_datain_i2c_4;
+wire ram_ready_i2c_4 = ram_ready_i2c;
+

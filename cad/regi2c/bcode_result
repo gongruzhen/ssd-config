@@ -1,0 +1,65 @@
+reg_file u_reg_file_0(
+   .clk(clk_400m),
+   .rst_n(rst_n_400m),
+   .debug_in(debug_in_reg_file_0),
+   .debug_out(debug_out_0),
+   .ram_addr(ram_addr_i2c_0[15:0]),
+   .ram_we(ram_we_i2c_0),
+   .ram_dataout(ram_datain_i2c_0),
+   .ram_enable(ram_enable_i2c_0),
+   .ram_datain(ram_dataout_i2c_0)
+);
+
+
+reg_file u_reg_file_1(
+   .clk(clk_400m),
+   .rst_n(rst_n_400m),
+   .debug_in(debug_in_reg_file_1),
+   .debug_out(debug_out_1),
+   .ram_addr(ram_addr_i2c_1[15:0]),
+   .ram_we(ram_we_i2c_1),
+   .ram_dataout(ram_datain_i2c_1),
+   .ram_enable(ram_enable_i2c_1),
+   .ram_datain(ram_dataout_i2c_1)
+);
+
+
+reg_file u_reg_file_2(
+   .clk(clk_400m),
+   .rst_n(rst_n_400m),
+   .debug_in(debug_in_reg_file_2),
+   .debug_out(debug_out_2),
+   .ram_addr(ram_addr_i2c_2[15:0]),
+   .ram_we(ram_we_i2c_2),
+   .ram_dataout(ram_datain_i2c_2),
+   .ram_enable(ram_enable_i2c_2),
+   .ram_datain(ram_dataout_i2c_2)
+);
+
+
+reg_file u_reg_file_3(
+   .clk(clk_400m),
+   .rst_n(rst_n_400m),
+   .debug_in(debug_in_reg_file_3),
+   .debug_out(debug_out_3),
+   .ram_addr(ram_addr_i2c_3[15:0]),
+   .ram_we(ram_we_i2c_3),
+   .ram_dataout(ram_datain_i2c_3),
+   .ram_enable(ram_enable_i2c_3),
+   .ram_datain(ram_dataout_i2c_3)
+);
+
+
+reg_file u_reg_file_4(
+   .clk(clk_400m),
+   .rst_n(rst_n_400m),
+   .debug_in(debug_in_reg_file_4),
+   .debug_out(debug_out_4),
+   .ram_addr(ram_addr_i2c_4[15:0]),
+   .ram_we(ram_we_i2c_4),
+   .ram_dataout(ram_datain_i2c_4),
+   .ram_enable(ram_enable_i2c_4),
+   .ram_datain(ram_dataout_i2c_4)
+);
+
+

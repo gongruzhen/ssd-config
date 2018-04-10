@@ -1,8 +1,8 @@
 #! /usr/bin/tclsh
 
-###############################
+###########################################################################
 #command format and option
-###############################
+###########################################################################
 set template_name [lindex $argv 0]
 set translate_format [lindex $argv 1]
 if {$template_name == ""} {
@@ -35,14 +35,17 @@ if {$translate_format != "" && $translate_format != "-v" && $translate_format !=
 }
 
 set result_name [format "%s.viewtool" $template_name]
+set result_wrnor [format "%s.wrnor" $template_name]
 set filer [open $template_name r]
 puts "Open file \"$template_name\" to read"
 set filer_lines [split [read $filer] \n]
 set filew [open $result_name w]
+set filew_wrnor [open $result_wrnor w]
 puts "Open file \"$result_name\" to write"
-###############################
+puts "Open file \"$result_wrnor\" to write"
+###########################################################################
 #flag
-###############################
+###########################################################################
 foreach lines $filer_lines {
     set line_vars [split $lines " "]
     if {[lindex $line_vars 0] == "_iloop_"} {
@@ -53,14 +56,36 @@ foreach lines $filer_lines {
         set oloop_msb [lindex $line_vars 2]
     }
 }
-###############################
+###########################################################################
 #smbus write data at address
-###############################
+###########################################################################
 # 0000000: 0401 0200 c000 0f9c 0000 0000 0000 0000  ................
 #          A0A1 A2A3 D0D1 D2D3                      ................
 # 0000010: 0000 0000 0000 0000 0000 0000 0000 0000  ................
 # 0000020: 0a      
+
 set view_tool_pre "0|CH0|AA|00|写|8|"
+
+####################################################
+#enter SMBus debug mode
+####################################################
+set address_data_enter_debug "ff ff 00 08 07 00 10 00"
+puts $filew [format "%s%s|0|" $view_tool_pre $address_data_enter_debug]
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data_enter_debug]
+###############################
+#read to check debug mode status
+###############################
+
+
+
+###############################
+#unprotect nor flash
+###############################
+#puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data_enter_debug]
+
+####################################################
+#get the write address and data
+####################################################
 set stop_flag 0
 foreach lines $filer_lines {
   set line_vars [split $lines " "]
@@ -76,9 +101,9 @@ foreach lines $filer_lines {
   if {$line_var1 == "0000" && $line_var2 == "0000" && $line_var3 == "0000" && $line_var4 == "0000"} {
     set stop_flag 1
   }
-###############################
+####################################################
 #process var1-4 to address_data1
-###############################
+####################################################
     set line_var1s [split  $line_var1 ""]
     set line_var10 [lindex  $line_var1s 0]
     set line_var11 [lindex  $line_var1s 1]
@@ -116,9 +141,9 @@ foreach lines $filer_lines {
      puts $filew [format "%s%s|0|" $view_tool_pre $address_data1]
   }
  
-###############################
+####################################################
 #process var5-8 to address_data2
-###############################
+####################################################
     set line_var1 $line_var5
     set line_var2 $line_var6
     set line_var3 $line_var7

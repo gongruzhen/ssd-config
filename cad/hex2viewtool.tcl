@@ -64,14 +64,24 @@ foreach lines $filer_lines {
 # 0000010: 0000 0000 0000 0000 0000 0000 0000 0000  ................
 # 0000020: 0a      
 
+###############################
+#viewtool format
+###############################
 set view_tool_pre "0|CH0|AA|00|写|8|"
+
+###############################
+#register address for nor pgm
+###############################
+set register_addressB0 0
+set register_addressB1 0x10 # 0x10~0x14 4KB RAM for NOR
+set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
 
 ####################################################
 #enter SMBus debug mode
 ####################################################
-set address_data_enter_debug "ff ff 00 08 07 00 10 00"
-puts $filew [format "%s%s|0|" $view_tool_pre $address_data_enter_debug]
-puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data_enter_debug]
+set address_data "ff ff 00 08 07 00 10 00"
+puts $filew [format "%s%s|0|" $view_tool_pre $address_data]
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
 ###############################
 #read to check debug mode status
 ###############################
@@ -81,7 +91,17 @@ puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data_enter_debug]
 ###############################
 #unprotect nor flash
 ###############################
-#puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data_enter_debug]
+set address_data "00 04 00 1e 00 00 00 00"
+#puts $filew [format "%s%s|0|" $view_tool_pre $address_data]
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
+
+###############################
+#erase nor flash
+###############################
+set address_data "00 04 00 1d 00 00 00 00"
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
+set address_data "00 04 00 1d 00 00 00 80"
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
 
 ####################################################
 #get the write address and data
@@ -132,13 +152,31 @@ foreach lines $filer_lines {
     set data_byte2 [format "%s%s" $line_var40 $line_var41]
     set data_byte1 [format "%s%s" $line_var32 $line_var33]
     set data_byte0 [format "%s%s" $line_var30 $line_var31]
-    set address_data1 [format "%s %s %s %s %s %s %s %s" $address_byte3 $address_byte2 $address_byte1 $address_byte0 $data_byte0 $data_byte1 $data_byte2 $data_byte3]
+    set address [format "%s %s %s %s" $address_byte3 $address_byte2 $address_byte1 $address_byte0]
+    set data [format "%s %s %s %s" $data_byte0 $data_byte1 $data_byte2 $data_byte3]
+    set address_data [format "%s %s" $address $data]
 
 ###############################
-#write to file
+#write to viewtool format file
 ###############################
   if {!$stop_flag} {
-     puts $filew [format "%s%s|0|" $view_tool_pre $address_data1]
+     puts $filew [format "%s%s|0|" $view_tool_pre $address_data]
+  }
+
+###############################
+#write to registers for nor pgm by viewtool
+###############################
+  if {!$stop_flag} {
+     set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
+     puts $filew_wrnor [format "%s%s %s|0|" $view_tool_pre $register_address $address]
+
+     incr register_addressB0
+     if {[expr $register_addressB0%256] == 0} {
+       set register_addressB0 0x0
+       incr register_addressB1
+     }
+     set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
+     puts $filew_wrnor [format "%s%s %s|0|" $view_tool_pre $register_address $data]
   }
  
 ####################################################
@@ -180,14 +218,70 @@ foreach lines $filer_lines {
     set data_byte2 [format "%s%s" $line_var40 $line_var41]
     set data_byte1 [format "%s%s" $line_var32 $line_var33]
     set data_byte0 [format "%s%s" $line_var30 $line_var31]
-    set address_data2 [format "%s %s %s %s %s %s %s %s" $address_byte3 $address_byte2 $address_byte1 $address_byte0 $data_byte0 $data_byte1 $data_byte2 $data_byte3]
+    set address [format "%s %s %s %s" $address_byte3 $address_byte2 $address_byte1 $address_byte0]
+    set data [format "%s %s %s %s" $data_byte0 $data_byte1 $data_byte2 $data_byte3]
+    set address_data [format "%s %s" $address $data]
 ###############################
 #write to file
 ###############################
   if {!$stop_flag} {
-     puts $filew [format "%s%s|0|" $view_tool_pre $address_data2]
+     puts $filew [format "%s%s|0|" $view_tool_pre $address_data]
   }
+
+###############################
+#write to registers for nor pgm by viewtool
+###############################
+  if {!$stop_flag} {
+     incr register_addressB0
+     if {[expr $register_addressB0%256] == 0} {
+       set register_addressB0 0x0
+       incr register_addressB1
+     }
+     set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
+     puts $filew_wrnor [format "%s%s %s|0|" $view_tool_pre $register_address $address]
+
+     incr register_addressB0
+     if {[expr $register_addressB0%256] == 0} {
+       set register_addressB0 0x0
+       incr register_addressB1 
+     }
+     set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
+     puts $filew_wrnor [format "%s%s %s|0|" $view_tool_pre $register_address $data]
+  }
+
 }
+
+###############################
+#append 3 groups of 0 address/data
+###############################
+for {i=0;i<3;i=i+1} {
+#for {set a 10}  {$a < 3} {incr a} #notice: less bracket
+     set address "00 00 00 00"
+     incr register_addressB0
+     if {[expr $register_addressB0%256] == 0} {
+       set register_addressB0 0x0
+       incr register_addressB1
+     }
+     set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
+     puts $filew_wrnor [format "%s%s %s|0|" $view_tool_pre $register_address $address]
+
+     set data "00 00 00 00"
+     incr register_addressB0
+     if {[expr $register_addressB0%256] == 0} {
+       set register_addressB0 0x0
+       incr register_addressB1
+     }
+     set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
+     puts $filew_wrnor [format "%s%s %s|0|" $view_tool_pre $register_address $data]
+}
+###############################
+#trigger nor flash pgm
+###############################
+set address_data "00 04 00 1d 00 00 00 00"
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
+set address_data "00 04 00 1d 00 00 00 40"
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
+
 close $filer
 close $filew
 puts "The file is OK!"

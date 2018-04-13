@@ -67,13 +67,14 @@ foreach lines $filer_lines {
 ###############################
 #viewtool format
 ###############################
-set view_tool_pre "0|CH0|AA|00|写|8|"
+set view_tool_pre "0|CH0|D4|F0|写|9|09 "
 
 ###############################
 #register address for nor pgm
 ###############################
 set register_addressB0 0
-set register_addressB1 0x10 # 0x10~0x14 4KB RAM for NOR
+# 0x10~0x14 4KB RAM for NOR
+set register_addressB1 0x10
 set register_address [format "00 04 %x %x" $register_addressB1 $register_addressB0]
 
 ####################################################
@@ -254,8 +255,7 @@ foreach lines $filer_lines {
 ###############################
 #append 3 groups of 0 address/data
 ###############################
-for {i=0;i<3;i=i+1} {
-#for {set a 10}  {$a < 3} {incr a} #notice: less bracket
+for {set a 0}  {$a < 3} {incr a} {
      set address "00 00 00 00"
      incr register_addressB0
      if {[expr $register_addressB0%256] == 0} {
@@ -282,6 +282,14 @@ puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
 set address_data "00 04 00 1d 00 00 00 40"
 puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
 
+
+
+
+
+###########################################################################
+#close file and exit process
+###########################################################################
 close $filer
 close $filew
+close $filew_wrnor
 puts "The file is OK!"

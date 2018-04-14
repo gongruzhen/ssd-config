@@ -1,0 +1,16 @@
+start vpp_on_flash_test
+for the 1 times
+Super-read in process...%00%01end for the 1 times
+
+
+
+for the 2 times
+Super-read in process...%00end for the 2 times
+
+
+
+for the 3 times
+Super-read in process...%00%01end for the 3 times
+
+
+

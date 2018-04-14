@@ -1,0 +1,856 @@
+ifndef VERBOSE
+  QUIET := @
+endif
+
+EMPTY       :=
+SPACE       :=  $(EMPTY) #end of the line
+
+CD          :=  cd
+MV          :=  mv
+CP          :=  cp -rf
+RM          :=  rm -rf
+MKDIR       :=  mkdir -p
+CHMOD       :=  chmod
+GREP        :=  grep -q
+AWK         :=  awk -F
+LN          :=  ln -s
+
+
+ADAPTER     ?=  sol_top_g5_ini
+SUITE       ?=  NandPCIESystemTest
+TEST        ?=  i2c_hostbus_fast
+BLOCK       ?=  bmd_core
+
+ST          ?=  0
+MODEL       ?=  top
+SEED        ?=  0
+TOP         :=  nand_con_test
+OBJ         :=  obj
+
+METRICS     ?=  line+cond+fsm+tgl+branch+assert
+
+VERBOSITY   ?=  UVM_MEDIUM
+
+##Add for gate sim##
+GATE        ?=  0
+POST        ?=  0
+#SDF_MIN_FILE =  relative path to add fast.sdf 
+#SDF_MAX_FILE =  relatvie path to add slow.sdf
+
+
+
+
+
+
+export TSB_TOP  = ../../../lib/ffsa40
+export TSB_SSIP = ${TSB_TOP}/IP_ALL_1226/TSB_WRAP
+export TSB_FFSA = ${TSB_TOP}/IP_ALL_1226/FFSA_40_FE_Lib
+
+export NAND_MODEL = $(NAND)
+
+ifeq ($(NAND),)
+  COMPDIR = base_compile
+else
+  COMPDIR = $(NAND)_compile
+endif
+
+ifeq (${SIMULATOR},ncsim)
+  export DIR1 = ncverilog
+  export DIR2 = lib_ncsim
+  export DIR3 = lib_ncsim
+  ifneq ($(findstring hynix,$(NAND)),)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/SRC_nc_encrypt
+  endif
+  ifeq ($(NAND),bics2_1t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT0V22BA8C_nc
+  endif
+  ifeq ($(NAND),bics2_2t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT1V22BA8H_nc
+  endif
+  ifeq ($(NAND),bics3_1t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT0T23BA8C_nc
+  endif
+  ifeq ($(NAND),bics3_2t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT1T23BA8H_nc
+  endif
+else
+  export DIR1 = vcs
+  export DIR2 = lib_vcs
+  export DIR3 = lib_dc
+  ifneq ($(findstring hynix,$(NAND)),)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/SRC_vcs_encrypt
+  endif
+  ifeq ($(NAND),bics2_1t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT0V22BA8C_vcs
+  endif
+  ifeq ($(NAND),bics2_2t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT1V22BA8H_vcs
+  endif
+  ifeq ($(NAND),bics3_1t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT0T23BA8C_vcs
+  endif
+  ifeq ($(NAND),bics3_2t)
+    export SRC_ENC = ../../../model/${NAND_MODEL}/TH58TFT1T23BA8H_vcs
+  endif
+endif
+
+SRC_NAME := $(shell echo $(SRC_ENC) | $(AWK) "/" '{ print $$NF }')
+
+ifneq ($(findstring bics,$(NAND)),)
+  BICS := 1
+endif
+
+ifeq ($(MAKECMDGOALS),verdi)
+  DEFINE    := +define+
+else
+  ifeq (${SIMULATOR},ncsim)
+    DEFINE  := -DEFine$(SPACE)
+  else
+    DEFINE  := +define+
+  endif
+endif
+
+
+ifdef SAVE
+  ST        :=  0
+endif
+
+ifdef RELOAD
+  ST        :=  1
+endif
+
+
+ifdef SAVE
+  LIB       :=  $(TOP)_checkpoint_INCA_libs
+else
+ifdef RELOAD
+  LIB       :=  $(TOP)_checkpoint_INCA_libs
+else
+  LIB       :=  $(TOP)_$(MODEL)_INCA_libs
+endif
+endif
+
+BIN         :=  ../../../script/bin
+
+PCIE        ?= 1
+
+BACKEND     ?=
+
+
+ifeq ($(SEED),random)
+  SEED_DIR  := seed_$(RANDSEED)
+else
+  SEED_DIR  := seed_$(SEED)
+endif
+
+
+define BUILD_COMPILATION
+	if [ ! -d $(OBJ)/$(COMPDIR) ]; then                                                    \
+		$(MKDIR) $(OBJ)/$(COMPDIR);                                                         \
+	fi;                                                                                    \
+	if [ "${SIMULATOR}" = ncsim ]; then                                                    \
+		if [ -d $(OBJ)/$(LIB) ]; then                                                       \
+			$(RM) $(OBJ)/$(LIB);                                                             \
+		fi;                                                                                 \
+		$(MKDIR) $(OBJ)/$(LIB)/worklib;                                                     \
+		echo "DEFINE worklib $(PWD)/$(OBJ)/$(LIB)/worklib" > $(OBJ)/$(LIB)/cds.lib;         \
+	fi;                                                                                    \
+	if [ "${SIMULATOR}" = vcs ]; then                                                      \
+		if [ -d $(OBJ)/simv.daidir ]; then                                                  \
+			$(RM) $(OBJ)/simv.daidir;                                                        \
+		fi;                                                                                 \
+		if [ -d csrc ]; then                                                                \
+			$(RM) csrc;                                                                      \
+		fi;                                                                                 \
+	fi;                                                                                    \
+	if [ "$(ST)" = 0 ]; then                                                               \
+		if [ -f ../tb/test_case_main.v ]; then                                              \
+			$(CP) ../tb/test_case_main.v . ;                                                 \
+		fi;                                                                                 \
+	fi;                                                                                    \
+	if [ -d ../tb/tests/$(TEST) ]; then                                                    \
+		$(CP) ../tb/tests/$(TEST)/* . ;                                                     \
+	fi;
+endef
+
+
+define BUILD_SIMULATION
+	if [ ! -d $(OBJ)/$(TEST) ]; then                                                       \
+		$(MKDIR) $(OBJ)/$(TEST);                                                            \
+	fi;                                                                                    \
+	if [ -z $(SAVE) ]; then                                                                \
+		if [ ! -d $(OBJ)/$(TEST)/$(SEED_DIR) ]; then                                        \
+			$(MKDIR) $(OBJ)/$(TEST)/$(SEED_DIR);                                             \
+		fi;                                                                                 \
+		echo 'TREE_ROOT := ../../../../../..' > $(OBJ)/$(TEST)/$(SEED_DIR)/Makefile;        \
+		echo 'BIN := ../../../../../../script/bin' >> $(OBJ)/$(TEST)/$(SEED_DIR)/Makefile;  \
+		echo 'include ../../../Makefile' >> $(OBJ)/$(TEST)/$(SEED_DIR)/Makefile;            \
+		$(CP) ${TSB_SSIP}/COMMON/lib/FFSA_INIT/lib_ncsim/data/* $(OBJ)/$(TEST)/$(SEED_DIR); \
+		$(CP) ../../../model/spi_model/W25Q80EW/*.TXT $(OBJ)/$(TEST)/$(SEED_DIR);           \
+		if [ "$(BICS)" = 1 ]; then                                                          \
+			$(CP) ../../../model/$(NAND)/${SRC_NAME}/include $(OBJ)/$(TEST)/$(SEED_DIR);     \
+		fi;                                                                                 \
+	else                                                                                   \
+		echo 'TREE_ROOT := ../../../../..' > $(OBJ)/$(TEST)/Makefile;                       \
+		echo 'BIN := ../../../../../script/bin' >> $(OBJ)/$(TEST)/Makefile;                 \
+		echo 'include ../../Makefile' >> $(OBJ)/$(TEST)/Makefile;                           \
+		$(CP) ${TSB_SSIP}/COMMON/lib/FFSA_INIT/lib_ncsim/data/* $(OBJ)/$(TEST);             \
+		$(CP) ../../../model/spi_model/W25Q80EW/*.TXT $(OBJ)/$(TEST);                       \
+	fi;
+endef
+
+
+
+.PHONY : build
+build:
+	$(QUIET) $(BUILD_COMPILATION)
+
+
+
+.PHONY : filelist
+filelist: build
+ifeq ($(GATE),1)
+	$(QUIET) $(BIN)/FileListGen.py -f ../../$(ADAPTER)/filelist_gate -b $(OBJ)/$(COMPDIR)
+endif
+ifeq ($(GATE),0)
+	$(QUIET) $(BIN)/FileListGen.py -f ../../$(ADAPTER)/filelist -b $(OBJ)/$(COMPDIR)
+endif    
+	$(QUIET) $(CP)  $(OBJ)/$(COMPDIR)/files.f.verdi ../../$(ADAPTER)/work                    
+
+
+
+RTL_CMD :=
+
+ifeq (${SIMULATOR},ncsim)
+  RTL_CMD += ncvlog
+  RTL_CMD += -CDSLib $(OBJ)/$(LIB)/cds.lib
+  RTL_CMD += -HDlvar ../config/hdl.var
+  RTL_CMD += -File ./obj/$(COMPDIR)/files.f.rtl
+  RTL_CMD += -LOgfile $(OBJ)/$(COMPDIR)/ncvlog.log
+endif
+
+
+ifeq (${SIMULATOR},vcs)
+  RTL_CMD += vlogan
+  RTL_CMD += -full64
+  RTL_CMD += -nc
+  RTL_CMD += -sverilog
+  RTL_CMD += +libext+.v
+  RTL_CMD += -f $(OBJ)/$(COMPDIR)/files.f.rtl
+ifdef RTL_TIMESCALE
+  RTL_CMD += -timescale=$(RTL_TIMESCALE) 
+endif
+  RTL_CMD += -work work
+  RTL_CMD += -kdb -lca
+  RTL_CMD += -l $(OBJ)/$(COMPDIR)/rtl.log
+endif
+
+RTL_CMD += $(RTL_OPTS)
+
+.PHONY : rtl
+rtl: filelist 
+	$(QUIET)$(RTL_CMD)
+
+
+
+TB_CMD :=
+
+ifeq (${SIMULATOR},ncsim)
+  TB_CMD += ncvlog
+ifdef SIMVIS
+  TB_CMD += $(DEFINE)SIMVIS
+endif
+  TB_CMD += -CDSLib $(OBJ)/$(LIB)/cds.lib
+  TB_CMD += -HDlvar ../config/hdl.var
+  TB_CMD += -File ./obj/$(COMPDIR)/files.f.tb
+  TB_CMD += -APpend_log
+  TB_CMD += -LOgfile $(OBJ)/$(COMPDIR)/ncvlog.log
+endif
+
+
+ifeq (${SIMULATOR},vcs)
+  TB_CMD  += vlogan
+  TB_CMD  += -full64
+  TB_CMD  += -nc
+  TB_CMD  += -sverilog
+  TB_CMD  += -sv_pragma
+  TB_CMD  += -f $(OBJ)/$(COMPDIR)/files.f.tb
+ifdef TB_TIMESCALE
+  TB_CMD += -timescale=$(TB_TIMESCALE) 
+endif
+  TB_CMD  += -work work
+  TB_CMD  += -kdb -lca
+  TB_CMD  += -l $(OBJ)/$(COMPDIR)/tb.log
+  TB_CMD  += $(DEFINE)vcs
+endif
+
+
+TB_CMD += $(DEFINE)NOVCD
+
+ifdef SAVE
+  TB_CMD += $(DEFINE)SAVE_CHECKPOINT
+endif
+
+ifdef BOOT
+  TB_CMD += $(DEFINE)BOOT
+endif
+
+ifeq ($(PCIE),1)
+  TB_CMD += $(DEFINE)PCIE_ACTIVE
+endif
+
+ifneq ($(findstring l06b,$(NAND)),)
+  TB_CMD += $(DEFINE)MICRON
+endif
+
+ifneq ($(findstring hynix,$(NAND)),)
+  TB_CMD += $(DEFINE)HYNIX
+  ifneq ($(findstring v3,$(NAND)),)
+    TB_CMD += $(DEFINE)V3
+  endif
+endif
+
+ifneq ($(findstring bics,$(NAND)),)
+  TB_CMD += $(DEFINE)BICS
+  ifeq ($(NAND),bics2_1t)
+    TB_CMD += $(DEFINE)MODULE=TH58TFT0V22BA8C
+    TB_CMD += $(DEFINE)INST0=bics_1t_nand0
+    TB_CMD += $(DEFINE)INST1=bics_1t_nand1
+    TB_CMD += $(DEFINE)INST2=bics_1t_nand2
+    TB_CMD += $(DEFINE)INST3=bics_1t_nand3
+  endif
+  ifeq ($(NAND),bics2_2t)
+    TB_CMD += $(DEFINE)MODULE=TH58TFT1V22BA8H
+    TB_CMD += $(DEFINE)INST0=bics_1t_nand0
+    TB_CMD += $(DEFINE)INST1=bics_1t_nand1
+    TB_CMD += $(DEFINE)INST2=bics_1t_nand2
+    TB_CMD += $(DEFINE)INST3=bics_1t_nand3
+  endif
+  ifeq ($(NAND),bics3_1t)
+    TB_CMD += $(DEFINE)MODULE=TH58TFT0T23BA8C
+    TB_CMD += $(DEFINE)INST0=bics_1t_nand0
+    TB_CMD += $(DEFINE)INST1=bics_1t_nand1
+    TB_CMD += $(DEFINE)INST2=bics_1t_nand2
+    TB_CMD += $(DEFINE)INST3=bics_1t_nand3
+  endif
+  ifeq ($(NAND),bics3_2t)
+    TB_CMD += $(DEFINE)MODULE=TH58TFT1T23BA8H
+    TB_CMD += $(DEFINE)INST0=bics_1t_nand0
+    TB_CMD += $(DEFINE)INST1=bics_1t_nand1
+    TB_CMD += $(DEFINE)INST2=bics_1t_nand2
+    TB_CMD += $(DEFINE)INST3=bics_1t_nand3
+  endif
+else
+  TB_CMD += $(DEFINE)TEST=$(TEST)
+endif
+
+ifneq ($(findstring L06bSync,$(SUITE)),)
+  TB_CMD += $(DEFINE)SO
+endif
+
+TB_CMD += $(TB_OPTS)
+
+.PHONY : tb
+tb: filelist
+	$(QUIET)$(TB_CMD)
+
+
+
+ELAB_CMD :=
+
+ifeq (${SIMULATOR},ncsim)
+  ELAB_CMD += ncelab 
+  ELAB_CMD += -CDSLib $(OBJ)/$(LIB)/cds.lib 
+  ELAB_CMD += -HDlvar ../config/hdl.var
+  ELAB_CMD += -LOgfile $(OBJ)/$(COMPDIR)/ncelab.log
+
+ifdef COVERAGE
+  ELAB_CMD += -coverage $(COVERAGE)
+endif
+ifndef TIMINGCHECK
+  ELAB_CMD += -notimingchecks
+  ELAB_CMD += -no_tchk_msg
+endif
+
+ifeq ($(GATE),0)
+ELAB_CMD += -nospecify
+endif
+
+ifdef PROF
+  ELAB_CMD += -iprof
+endif
+ifdef TIMESCALE
+  ELAB_CMD += -TIMESCALE $(TIMESCALE)
+endif
+  ELAB_CMD += -nowarn CUVWSP 
+  ELAB_CMD += $(TOP)
+  ELAB_CMD += $(LOG)
+endif
+
+
+ifeq (${SIMULATOR},vcs)
+  ELAB_CMD  += vcs
+  ELAB_CMD  += -full64
+  ELAB_CMD  += -o $(OBJ)/$(COMPDIR)/simv
+  ELAB_CMD  += -ntb_opts sv_dwfork
+  ELAB_CMD  += -sverilog
+  ELAB_CMD  += ${UVM_HOME}/src/dpi/uvm_dpi.cc
+  ELAB_CMD  += -CFLAGS -DVCS
+  ELAB_CMD  += -top nand_con_test
+  ELAB_CMD  += -kdb -lca
+
+ifeq (${GATE},1)
+  ELAB_CMD  += +delay_mode_zero
+endif
+ifeq (${POST},1)
+  ELAB_CMD  += -negdelay
+  ELAB_CMD  += +neg_tchk
+  ELAB_CMD  += +sdfverbose
+  ELAB_CMD  += +maxdelays
+  ELAB_CMD  += +mindelays
+endif
+
+ifdef TIMESCALE
+  ELAB_CMD  += -override_timescale=$(TIMESCALE)
+endif
+  ELAB_CMD  += -l $(OBJ)/$(COMPDIR)/comp.log
+  ELAB_CMD  += +nospecify
+ifdef VERDI
+  ELAB_CMD  += -fsdb
+endif
+ifdef GUI
+  ELAB_CMD  += -debug_all
+else
+  ELAB_CMD  += -debug_pp
+endif
+ifdef XZCHECK
+  ELAB_CMD  += -xzcheck nofalseneg
+endif
+ifdef LOOP_DETECT
+  ELAB_CMD += +vcs+loopreport
+endif
+ifdef PROF
+  ELAB_CMD  += -lca
+  ELAB_CMD  += -simprofile
+endif
+ifndef NODUMP
+  ELAB_CMD  += +vcs+vcdpluson
+endif
+ifndef TIMINGCHECK
+  ELAB_CMD  += +notimingcheck
+endif
+ifdef COV
+  ELAB_CMD  += -cm $(METRICS)
+endif
+  ELAB_CMD  += -assert enable_diag
+endif
+
+
+ELAB_CMD += $(ELAB_OPTS)
+
+.PHONY : elab
+elab: rtl tb
+	$(QUIET)$(ELAB_CMD)
+
+
+
+.PHONY : comp
+comp: elab
+
+
+
+SIM_CMD :=
+
+ifeq (${SIMULATOR},ncsim)
+
+  SIM_CMD += ncsim
+  SIM_CMD += $(TOP)
+
+ifdef VERDI
+  ifndef SAVE
+    ifndef RELOAD
+      SIM_CMD += -i ../../../../config/fsdb.tcl
+    endif
+  endif
+endif
+
+ifdef SAVE
+  SIM_CMD += -HDlvar ../../../config/hdl.var
+  SIM_CMD += -CDSLib ../$(LIB)/cds.lib
+  ifdef VERDI
+    SIM_CMD += -input "@call fsdbDumpfile {"nand_con_test_checkpoint.fsdb"}"
+    SIM_CMD += -input "@call fsdbDumpvars {nand_con_test}"
+  endif
+  ifndef GUI
+    SIM_CMD += -input ../../../config/save.inp
+  endif
+else
+  SIM_CMD += -HDlvar ../../../../config/hdl.var
+  SIM_CMD += -CDSLib ../../$(LIB)/cds.lib
+endif
+
+ifdef RELOAD
+  SIM_CMD += -input "@restart worklib.SNAPSHOT:module"
+  ifdef VERDI
+    SIM_CMD += -input "@call fsdbDumpfile {"nand_con_test_restart.fsdb"}"
+    SIM_CMD += -input "@call fsdbDumpvars {nand_con_test}"
+  endif
+  ifndef GUI
+    SIM_CMD += -input @run
+  endif
+endif
+
+ifdef PROF
+  SIM_CMD += -profile
+endif
+
+  SIM_CMD += -LOgfile ncsim.log
+endif
+
+
+ifeq (${SIMULATOR},vcs)
+  SIM_CMD   += ../../$(COMPDIR)/simv
+  SIM_CMD   += -l run.log
+  SIM_CMD   += +UVM_TESTNAME=$(BLOCK)_base_test
+  SIM_CMD   += +UVM_VERBOSITY=$(VERBOSITY)
+  SIM_CMD   += +UVM_NO_RELNOTES
+  SIM_CMD   += -assert report=assert.report
+  SIM_CMD   += -assert nopostproc
+ifeq ($(SEED),random)
+  SIM_CMD   += +ntb_random_seed=$(RANDSEED)
+else
+  SIM_CMD   += +ntb_random_seed=$(SEED)
+endif
+
+ifdef VERDI
+  ifndef SAVE
+    ifndef RELOAD
+      SIM_CMD += +fsdbfile+nand_con_test.fsdb
+      SIM_CMD += -ucli -i ../../../../config/dump.ucli
+    endif
+  endif
+endif
+
+ifdef SAVE
+  SIM_CMD += +fsdbfile+nand_con_test_snapshot.fsdb
+  SIM_CMD += $(DEFINE)SAVE_SNAPSHOT
+endif
+
+ifdef RELOAD
+  SIM_CMD += +fsdbfile+nand_con_test_restart.fsdb
+  SIM_CMD += $(DEFINE)RESTART_SNAPSHOT
+endif
+
+ifdef MDA
+  SIM_CMD += +fsdb+all=on
+endif
+
+ifdef LOOP_DETECT
+  SIM_CMD += +vcs+loopreport
+endif
+
+ifdef PROF
+  SIM_CMD   += -simprofile
+ifeq ($(PROF),time)
+  SIM_CMD += time
+else
+  SIM_CMD += mem
+endif
+
+endif
+
+ifdef COV
+  SIM_CMD   += -cm $(METRICS)
+  SIM_CMD   += -cm_dir ./$(SEED_DIR)
+endif 
+
+endif
+
+ifdef GUI
+  SIM_CMD += -gui
+endif
+
+ifeq ($(ST),1)
+  export ST = 1
+endif
+
+ifeq ($(NAND),hynix_v3)
+  ifdef SAVE
+    SIM_CMD += +CFG_PATH=../../${SRC_ENC}/hynix
+    SIM_CMD += +HYNIX_ZU256GTLC_BADBLOCK_PATH=../../${SRC_ENC}/hynix/ZU256GTLC/badblock.hex
+    SIM_CMD += +HYNIX_ZU256GTLC_RPP_PATH=../../${SRC_ENC}/hynix/ZU256GTLC/rpp.hex
+    SIM_CMD += +HYNIX_ZU256GTLC_UID_PATH=../../${SRC_ENC}/hynix/ZU256GTLC/uid.hex
+  else
+    SIM_CMD += +CFG_PATH=../../../${SRC_ENC}/hynix
+    SIM_CMD += +HYNIX_ZU256GTLC_BADBLOCK_PATH=../../../${SRC_ENC}/hynix/ZU256GTLC/badblock.hex
+    SIM_CMD += +HYNIX_ZU256GTLC_RPP_PATH=../../../${SRC_ENC}/hynix/ZU256GTLC/rpp.hex
+    SIM_CMD += +HYNIX_ZU256GTLC_UID_PATH=../../../${SRC_ENC}/hynix/ZU256GTLC/uid.hex
+  endif
+  SIM_CMD += +HYNIX_NAND_IO_FREQ=100.0
+endif
+
+ifeq ($(NAND),hynix_v4)
+  SIM_CMD += +CFG_PATH=../../../${SRC_ENC}/hynix
+  SIM_CMD += +HYNIX_NAND_IO_FREQ=100.0
+endif
+
+SIM_CMD += $(SIM_OPTS)
+
+export SIMCMD = $(SIM_CMD)
+
+.PHONY : sim
+sim:
+	$(QUIET) $(BUILD_SIMULATION)
+	$(QUIET) if [ "$(SAVE)" = 1 ]; then                                                         \
+		$(CD) $(OBJ)/$(TEST);                                                                    \
+	else                                                                                        \
+		$(CD) $(OBJ)/$(TEST)/$(SEED_DIR);                                                        \
+	fi;                                                                                         \
+	if [ "$(ST)" = 1 ]; then                                                                    \
+		$(MAKE) single ADAPTER=$(ADAPTER)/work SUITE=$(SUITE) TEST=$(TEST) | tee st.log;         \
+	else                                                                                        \
+		$(SIM_CMD);                                                                              \
+	fi;                                                                                         \
+	$(CD) -;                                                                                    \
+	$(MAKE) -s checksimlog TEST=$(TEST) SEED=$(SEED);
+
+
+
+FILELIST_EXIST := $(shell [ -f $(OBJ)/$(COMPDIR)/files.f.verdi ] && echo 1 || echo 0)
+
+FSDB ?= $(OBJ)/$(TEST)/$(SEED_DIR)/$(TOP).fsdb
+
+VERDI_CMD :=
+VERDI_CMD += verdi
+ifeq (${SIMULATOR},ncsim)
+  VERDI_CMD += -sv
+endif
+VERDI_CMD += -nologo
+
+ifeq (${SIMULATOR},vcs)
+  VERDI_CMD += -simflow
+  VERDI_CMD += -simdir obj
+endif
+
+ifeq ($(FILELIST_EXIST),1)
+  VERDI_CMD += -ssf $(FSDB)
+endif
+
+VERDI_CMD += -top nand_con_test
+
+
+ifeq (${SIMULATOR},ncsim)
+  VERDI_CMD += -f $(OBJ)/$(COMPDIR)/files.f.verdi
+
+  ifeq ($(PCIE),1)
+    VERDI_CMD += $(DEFINE)PCIE_ACTIVE
+  endif
+
+
+  ifneq ($(findstring l06b,$(NAND)),)
+    VERDI_CMD += $(DEFINE)MICRON
+  endif
+
+  ifneq ($(findstring hynix,$(NAND)),)
+    VERDI_CMD += $(DEFINE)HYNIX
+  endif
+
+  ifneq ($(findstring bics,$(NAND)),)
+    VERDI_CMD += $(DEFINE)BICS
+    ifeq ($(NAND),bics2_1t)
+      VERDI_CMD += $(DEFINE)MODULE=TH58TFT0V22BA8C
+      VERDI_CMD += $(DEFINE)INST0=bics_1t_nand0
+      VERDI_CMD += $(DEFINE)INST1=bics_1t_nand1
+      VERDI_CMD += $(DEFINE)INST2=bics_1t_nand2
+      VERDI_CMD += $(DEFINE)INST3=bics_1t_nand3
+    endif
+    ifeq ($(NAND),bics2_2t)
+      VERDI_CMD += $(DEFINE)MODULE=TH58TFT1V22BA8H
+      VERDI_CMD += $(DEFINE)INST0=bics_1t_nand0
+      VERDI_CMD += $(DEFINE)INST1=bics_1t_nand1
+      VERDI_CMD += $(DEFINE)INST2=bics_1t_nand2
+      VERDI_CMD += $(DEFINE)INST3=bics_1t_nand3
+    endif
+    ifeq ($(NAND),bics3_1t)
+      VERDI_CMD += $(DEFINE)MODULE=TH58TFT0T23BA8C
+      VERDI_CMD += $(DEFINE)INST0=bics_1t_nand0
+      VERDI_CMD += $(DEFINE)INST1=bics_1t_nand1
+      VERDI_CMD += $(DEFINE)INST2=bics_1t_nand2
+      VERDI_CMD += $(DEFINE)INST3=bics_1t_nand3
+    endif
+    ifeq ($(NAND),bics3_2t)
+      VERDI_CMD += $(DEFINE)MODULE=TH58TFT1T23BA8H
+      VERDI_CMD += $(DEFINE)INST0=bics_1t_nand0
+      VERDI_CMD += $(DEFINE)INST1=bics_1t_nand1
+      VERDI_CMD += $(DEFINE)INST2=bics_1t_nand2
+      VERDI_CMD += $(DEFINE)INST3=bics_1t_nand3
+    endif
+  endif
+endif
+
+
+
+VERDI_CMD += &
+
+VERDI_CMD += $(VERDI_OPTS)
+
+.PHONY : verdi
+verdi:
+	$(QUIET) if [ -f $(OBJ)/$(COMPDIR)/files.f.verdi ]; then                                                 \
+		$(VERDI_CMD)                                                                               \
+	else                                                                                          \
+		$(MAKE) filelist;                                                                          \
+		$(VERDI_CMD)                                                                               \
+	fi;
+
+
+
+COLOR ?= 1
+
+.PHONY : checkcomplog
+checkcomplog:
+	$(QUIET) $(BIN)/CheckCompLog.py --block $(BLOCK) --color $(COLOR)
+
+
+
+.PHONY : checksimlog
+checksimlog:
+	$(QUIET)$(BIN)/CheckSimLog.py --build $(OBJ) --test $(TEST)$(SUFFIX) --seed $(SEED) --color $(COLOR) --st $(ST);
+
+
+
+RUNS        ?= 1
+TESTGROUP   ?= $(BLOCK)_group
+TESTNAMES   ?= ""
+
+.PHONY : tests
+tests:
+	$(QUIET)$(RM) *.txt;                                                                                                                                          \
+	if [ -z $(TESTNAMES) ];                                                                                                                                       \
+	then                                                                                                                                                          \
+		rpt_name=$(TESTGROUP);                                                                                                                                     \
+	else                                                                                                                                                          \
+		rpt_name='testnames';                                                                                                                                      \
+	fi;                                                                                                                                                           \
+	echo '' >> ./$${rpt_name}.txt;                                                                                                                                \
+	echo "$${rpt_name} Regression Started at `date`" >> ./$${rpt_name}.txt;                                                                                       \
+	echo '' >> ./$${rpt_name}.txt;                                                                                                                                \
+	blocklist=`$(BIN)/GroupList.py --testgroup $(TESTGROUP) --testnames $(TESTNAMES) --block $(BLOCK) --return 0`;                                                \
+	for block in $$blocklist;                                                                                                                                     \
+	do                                                                                                                                                            \
+		if [ "$$block" = hynixv3_group ]; then                                                                                                                     \
+			nand='hynix_v3';                                                                                                                                        \
+		elif [ "$$block" = hynixv4_group ]; then                                                                                                                   \
+			nand='hynix_v4';                                                                                                                                        \
+		elif [ "$$block" = bics3_group ]; then                                                                                                                     \
+			nand='bics3_1t';                                                                                                                                        \
+		elif [ "$$block" = l06bsync_group ]; then                                                                                                                      \
+			nand='l06b';                                                                                                                                            \
+		elif [ "$$block" = l06basync_group ]; then                                                                                                                      \
+			nand='l06b';                                                                                                                                            \
+		else                                                                                                                                                       \
+			nand='base';                                                                                                                                            \
+		fi;                                                                                                                                                        \
+		if [ "$$nand" = base ]; then                                                                                                                               \
+			echo '' > /dev/null;                                                                                                                                                \
+		else                                                                                                                                                       \
+			echo '';                                                                                                                                                   \
+			echo -e "Compiling \033[31m $$block \033[0m ...";                                                                                                          \
+			echo '';                                                                                                                                                   \
+			$(MAKE) -s comp NAND=$$nand NODUMP=1 COV=$(COV) > /dev/null;                                                                                            \
+		fi;                                                                                                                                                        \
+	done;                                                                                                                                                         \
+	testlist=`$(BIN)/GroupList.py --testgroup $(TESTGROUP) --testnames $(TESTNAMES) --return 1`;                                                                  \
+	echo "$$testlist" | while read line;                                                                                                                          \
+	do                                                                                                                                                            \
+		if echo "$$line" | grep -q "SUITE"; then                                                                                                                   \
+			test=`echo $$line | $(AWK) " *SUITE: *" '{ print $$1 }'`;                                                                                               \
+			tail=`echo $$line | $(AWK) " *SUITE: *" '{ print $$NF }'`;                                                                                              \
+			suite=`echo $$tail | $(AWK) " *NAND: *" '{ print $$1 }'`;                                                                                               \
+			nand=`echo $$tail | $(AWK) " *NAND: *" '{ print $$NF }'`;                                                                                               \
+			if [ "$$nand" = NA ]; then                                                                                                                              \
+				nand='base';                                                                                                                                         \
+			fi;                                                                                                                                                     \
+			for run in {1..$(RUNS)};                                                                                                                                \
+			do                                                                                                                                                      \
+				echo "";                                                                                                                                             \
+				seed=`perl $(BIN)/RandSeedGen.pl`;                                                                                                                   \
+				echo -e "Running  \033[31m $$line    SEED: $$seed \033[0m ...";                                                                                      \
+				echo "";                                                                                                                                             \
+				if [ "$$suite" = NA ]; then                                                                                                                          \
+					$(MAKE) -s comp sim TEST=$$test SEED=$$seed SIM_OPTS="+vcs+nostdout" COV=$(COV) > /dev/null;                                                      \
+				else                                                                                                                                                 \
+					$(MAKE) -s sim SUITE=$$suite TEST=$$test NAND=$$nand SEED=$$seed SIM_OPTS="+vcs+nostdout" COV=$(COV) > /dev/null;                                 \
+				fi;                                                                                                                                                  \
+  				$(MAKE) -s checksimlog TEST=$$test SEED=$$seed COLOR=1;                                                                                              \
+  				$(MAKE) -s checksimlog TEST=$$test SEED=$$seed COLOR=0 >> ./$${rpt_name}.txt;                                                                        \
+			done;                                                                                                                                                   \
+		else                                                                                                                                                       \
+			echo 'SUITE must be specified correctly in ../config/group.rmdb';                                                                                       \
+		fi;                                                                                                                                                        \
+	done;                                                                                                                                                         \
+	echo '';                                                                                                                                                      \receive_p_ALT_Simple_Dual_Port_RAM
+	echo '';                                                                                                                                                      \
+	echo '' >> ./$${rpt_name}.txt;                                                                                                                                \
+	echo "$(TESTGROUP) Regression Finished at `date`" >> ./$${rpt_name}.txt;                                                                                      \
+	$(MAKE) -s htmlrpt;
+
+
+
+
+
+VPLAN ?= ../../sol_top_g5_ini/vplan/top_vplan.xml
+.PHONY : checkvplan
+checkvplan:
+	$(QUIET) hvp annotate -lca -plan $(VPLAN) -plan_out top_vplan.ann.xml
+
+
+
+.PHONY : urg
+urg:
+	$(QUIET) $(BIN)/UrgReport.py --block $(BLOCK) 
+	
+
+
+VDB ?= ./$(BLOCK)_merged.vdb
+DES_VPLAN ?= ../../sol_top_g5_ini/vplan/top_vplan.ann.xml
+
+.PHONY : annotate
+annotate:
+	hvp annotate -dir $(VDB) -plan $(VPLAN) -plan_out $(DES_VPLAN)
+
+
+	
+
+COVDIR ?= ./$(BLOCK)_merged.vdb
+
+.PHONY : cov
+cov:
+	$(QUIET) dve -full64 -covdir $(COVDIR) &
+
+
+
+.PHONY : testlist
+testlist:
+	$(QUIET) echo '' && $(BIN)/GroupList.py --testgroup all_group --testnames "" --return 1
+
+
+
+.PHONY : htmlrpt
+htmlrpt:
+	$(QUIET) $(BIN)/HTMLReport.py -g $(TESTGROUP)
+
+
+
+.PHONY : clean
+clean: 
+	$(BIN)/Clean.py
+
+
+
+.PHONY : help
+help: 
+	$(BIN)/HelpDoc.py
+
+
+

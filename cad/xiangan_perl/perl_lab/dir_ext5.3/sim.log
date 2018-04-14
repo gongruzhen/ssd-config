@@ -1,0 +1,10 @@
+
+
+Compile rtl...
+
+./simv update
+
+# -------------------------------------------
+# teststatus: failed
+# failed_reason: check failed for y output
+# -------------------------------------------

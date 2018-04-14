@@ -281,6 +281,12 @@ set address_data "00 04 00 1d 00 00 00 00"
 puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
 set address_data "00 04 00 1d 00 00 00 40"
 puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
+####################################################
+#exit SMBus debug mode
+####################################################
+set address_data "ff ff 00 08 00 00 10 00"
+puts $filew [format "%s%s|0|" $view_tool_pre $address_data]
+puts $filew_wrnor [format "%s%s|0|" $view_tool_pre $address_data]
 
 
 

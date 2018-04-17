@@ -56,14 +56,14 @@ set view_tool_write_pre "0|CH0|D4|F0|写|9|09 "
 ###############################
 proc view_tool_wr_rd {filew_wrnor view_tool_write_pre address_data} {
   puts $filew_wrnor [format "%s%s|0|" $view_tool_write_pre $address_data]
-  puts $filew_wrnor "0|CH0|D4|F0|du|5||0|"
+  puts $filew_wrnor "0|CH0|D4|F0|读|5||0|"
 }
 ###############################
 #viewtool write and read proc
 ###############################
 proc view_tool_check_ready {filew_wrnor} {
       puts $filew_wrnor "0|CH0|D4|F0|写|5|05 00 04 00 1e|1000|"
-      puts $filew_wrnor "0|CH0|D4|F0|du|5||0|"
+      puts $filew_wrnor "0|CH0|D4|F0|读|5||0|"
 }
 
 ###########################################################################

@@ -17,34 +17,105 @@ puts $filew "Product,Capacity,No.,UUID,Plane0,Plane1,Plane0,Plane1,Plane0,Plane1
 ###########################################################################
 #file O
 ###########################################################################
-set file_list [ls -l]
-foreach lines_file_list $file_list {      #to process file in list one by one
-  puts "Open file \"$lines_file_list\" to read"
-  set filer [open $lines_file_list r]
+exec ls -l > FileListTmp
+set filer_tt [open FileListTmp r]
+set filer_lines [split [read $filer_tt] \n]
+set Start2ProcessDutCsv 0
+#puts $filer_lines
+#start of  all file to read and one file write for foreach lines_FileListTmp
+foreach lines_FileListTmp $filer_lines {
+  set line_vars [split $lines_FileListTmp ":"]
+  set DutTestMinuteCsv [lindex $line_vars 1]
+  set line_vars_MinuteCsv [split $DutTestMinuteCsv " "]
+  set DutTestCsv [lindex $line_vars_MinuteCsv 1]
+  if {[string match *DUT*.csv $DutTestCsv]} {
+    set FileName $DutTestCsv
+    set Start2ProcessDutCsv 1
+  }
+#start of one file to read
+#start all file to read and one file write for if Start2ProcessDutCsv
+if {$Start2ProcessDutCsv} {
+  puts "Open file \"$FileName\" to read"
+  set filer [open $FileName r]
+#  set filer [open $lines_file_list r]
   set filer_lines [split [read $filer] \n]
 
 ################################################################
 #process each nand target
 ################################################################
+#start of read block info one by one
 set line_counter 0
-set Ce0Plane0Setup 0
-set Ce0Plane1Setup 0
-set Ce1Plane0Setup 0
-set Ce1Plane1Setup 0
-set Ce0Plane0BadBlock 0
-set Ce0Plane1BadBlock 0
-set Ce1Plane0BadBlock 0
-set Ce1Plane1BadBlock 0
-foreach lines $filer_lines {      #to read block info in file one by one
+    set Ce0Plane0Setup 0
+    set Ce0Plane1Setup 0
+    set Ce1Plane0Setup 0
+    set Ce1Plane1Setup 0
+    set Ce0Plane0BadBlock 0
+    set Ce0Plane1BadBlock 0
+    set Ce1Plane0BadBlock 0
+    set Ce1Plane1BadBlock 0
+    set UID 0
+        set EccDG0A00 0
+        set EccDG1A00 0
+        set EccDG2A00 0
+        set EccDG3A00 0
+        set EccDG4A00 0
+        set EccDG5A00 0
+        set EccDG6A00 0
+        set EccDG7A00 0
+        set EccDG8A00 0
+        set tPROGA00  0
+        set tPROGMin00 0
+        set tPROGMax00 0
+
+        set EccDG0A01 0
+        set EccDG1A01 0
+        set EccDG2A01 0
+        set EccDG3A01 0
+        set EccDG4A01 0
+        set EccDG5A01 0
+        set EccDG6A01 0
+        set EccDG7A01 0
+        set EccDG8A01 0
+        set tPROGA01  0
+        set tPROGMin01 0
+        set tPROGMax01 0
+
+        set EccDG0A10 0
+        set EccDG1A10 0
+        set EccDG2A10 0
+        set EccDG3A10 0
+        set EccDG4A10 0
+        set EccDG5A10 0
+        set EccDG6A10 0
+        set EccDG7A10 0
+        set EccDG8A10 0
+        set tPROGA10  0
+        set tPROGMin10 0
+        set tPROGMax10 0
+
+        set EccDG0A11 0
+        set EccDG1A11 0
+        set EccDG2A11 0
+        set EccDG3A11 0
+        set EccDG4A11 0
+        set EccDG5A11 0
+        set EccDG6A11 0
+        set EccDG7A11 0
+        set EccDG8A11 0
+        set tPROGA11  0
+        set tPROGMin11 0
+        set tPROGMax11 0
+
+foreach lines $filer_lines {
     set line_vars [split $lines ","]
   if {$line_counter==0} {
-    if {[lindex $line_vars 0] == "BlockCount"} {
+    if {[string match *BlockCount* [lindex $line_vars 0]]} {
         set FileFormatOK 1
     } else {
-        puts "The file \"$filer_lines\" format not exist:first word not BlockCount"
+        puts "The file \"$FileName\" format not exist:first word not BlockCount"
         exit
     }
-  } elseif {$line_counter==1} {
+  } elseif {$line_counter == 1} {
         set BlockCount [lindex $line_vars 0]
         set EccDG0A [lindex $line_vars 2]
         set EccDG1A [lindex $line_vars 3]
@@ -61,7 +132,8 @@ foreach lines $filer_lines {      #to read block info in file one by one
         set PlaneIndex [lindex $line_vars 15]
         set UID [lindex $line_vars 16]
   }
-  if {![$line_counter==0]} {
+   #start of one file to read,it's start of line_counter>0
+  if {$line_counter!=0} {
     set EccDG0 [lindex $line_vars 2]
     set EccDG1 [lindex $line_vars 3]
     set EccDG2 [lindex $line_vars 4]
@@ -75,7 +147,7 @@ foreach lines $filer_lines {      #to read block info in file one by one
     set tPROG [lindex $line_vars 12]
     set CeIndex [lindex $line_vars 13]
     set PlaneIndex [lindex $line_vars 15]
-    if {$CeIndex==0 && PlaneIndex==0} {
+    if {$CeIndex==0 && $PlaneIndex==0} {
      if {$BlockType==0} {
       if {$Ce0Plane0Setup==0} {
         set EccDG0A00 [lindex $line_vars 2]
@@ -90,7 +162,7 @@ foreach lines $filer_lines {      #to read block info in file one by one
         set tPROGA00 [lindex $line_vars 12]
         set tPROGMin00 [lindex $line_vars 12]
         set tPROGMax00 [lindex $line_vars 12]
-      } else {  #setup==1,not the first line
+      } else {  #setup==1,and not the first line
         set EccDG0A00 [expr [expr $EccDG0A00+$EccDG0]/2]
         set EccDG1A00 [expr [expr $EccDG1A00+$EccDG1]/2]
         set EccDG2A00 [expr [expr $EccDG2A00+$EccDG2]/2]
@@ -108,13 +180,14 @@ foreach lines $filer_lines {      #to read block info in file one by one
             set $tPROGMax00 $tPROG
         } 
       }
+#puts $tPROGA00
       set Ce0Plane0Setup 1
      } else {
        incr $Ce0Plane0Badblock
      }
     }
 
-    if {$CeIndex==0 && PlaneIndex==1} {
+    if {$CeIndex==0 && $PlaneIndex==1} {
      if {$BlockType==0} {
       if {$Ce0Plane1Setup==0} {
         set EccDG0A01 [lindex $line_vars 2]
@@ -129,7 +202,7 @@ foreach lines $filer_lines {      #to read block info in file one by one
         set tPROGA01 [lindex $line_vars 12]
         set tPROGMin01 [lindex $line_vars 12] 
         set tPROGMax01 [lindex $line_vars 12] 
-      } else {  #setup==1,not the first line
+      } else {  #setup==1,and not the first line
         set EccDG0A01 [expr [expr $EccDG0A01+$EccDG0]/2]
         set EccDG1A01 [expr [expr $EccDG1A01+$EccDG1]/2]
         set EccDG2A01 [expr [expr $EccDG2A01+$EccDG2]/2]
@@ -152,7 +225,7 @@ foreach lines $filer_lines {      #to read block info in file one by one
      }
     }
 
-    if {$CeIndex==1 && PlaneIndex==0} {
+    if {$CeIndex==1 && $PlaneIndex==0} {
      if {$BlockType==0} {
       if {$Ce1Plane0Setup==0} {
         set EccDG0A10 [lindex $line_vars 2]
@@ -167,7 +240,7 @@ foreach lines $filer_lines {      #to read block info in file one by one
         set tPROGA10 [lindex $line_vars 12]
         set tPROGMin10 [lindex $line_vars 12]
         set tPROGMax10 [lindex $line_vars 12]
-      } else {  #setup==1,not the first line
+      } else {  #setup==1,and not the first line
         set EccDG0A10 [expr [expr $EccDG0A10+$EccDG0]/2]
         set EccDG1A10 [expr [expr $EccDG1A10+$EccDG1]/2]
         set EccDG2A10 [expr [expr $EccDG2A10+$EccDG2]/2]
@@ -190,7 +263,7 @@ foreach lines $filer_lines {      #to read block info in file one by one
      }
     }
 
-    if {$CeIndex==1 && PlaneIndex==1} {
+    if {$CeIndex==1 && $PlaneIndex==1} {
      if {$BlockType==0} {
       if {$Ce1Plane1Setup==0} {
         set EccDG0A11 [lindex $line_vars 2]
@@ -205,7 +278,7 @@ foreach lines $filer_lines {      #to read block info in file one by one
         set tPROGA11 [lindex $line_vars 12]
         set tPROGMin11 [lindex $line_vars 12]
         set tPROGMax11 [lindex $line_vars 12]
-      } else {  #setup==1,not the first line
+      } else {  #setup==1,and not the first line
         set EccDG0A11 [expr [expr $EccDG0A11+$EccDG0]/2]
         set EccDG1A11 [expr [expr $EccDG1A11+$EccDG1]/2]
         set EccDG2A11 [expr [expr $EccDG2A11+$EccDG2]/2]
@@ -230,18 +303,25 @@ foreach lines $filer_lines {      #to read block info in file one by one
 
 
 
-  }  #end of one file to read
-
-  puts $filew "B16,64GB,$line_counter,$UID,$Ce0Plane0BakBlock,$Ce0Plane1BakBlock,$Ce1Plane0BakBlock,$Ce1Plane1BakBlock,tPROGA00,tPROGA01,tPROGA10,tPROGA11,tPROGMin00,tPROGMin01,tPROGMin10,tPROGMin11,tPROGMax00,tPROGMax01,tPROGMax10,tPROGMax11,,,,,EccDG0A00,EccDG0A01,EccDG0A10,EccDG0A11,EccDG1A00,EccDG1A01,EccDG1A10,EccDG1A11"
-  close $filer
+  }
+#end of one file to read,it's end of line_counter>0
+set Start2ProcessDutCsv 0
   set line_counter [expr $line_counter+1] 
+
   #incr $line_counter
-}  #end all file to read and one file write
+}
+  puts $filew "B16,64GB,$line_counter,$UID,$Ce0Plane0BadBlock,$Ce0Plane1BadBlock,$Ce1Plane0BadBlock,$Ce1Plane1BadBlock,$tPROGA00,$tPROGA01,$tPROGA10,$tPROGA11,$tPROGMin00,$tPROGMin01,$tPROGMin10,$tPROGMin11,$tPROGMax00,$tPROGMax01,$tPROGMax10,$tPROGMax11,,,,,$EccDG0A00,$EccDG0A01,$EccDG0A10,$EccDG0A11,$EccDG1A00,$EccDG1A01,$EccDG1A10,$EccDG1A11"
+#end of one file to write
+#end of read block info one by one
+close $filer
+}
+#end all file to read and one file write for if Start2ProcessDutCsv
 
 
 ###########################################################################
 #close file and exit process
 ###########################################################################
-}  #end all file to read and one file write
+}
+#end of  all file to read and one file write for foreach lines_FileListTmp
 close $filew
 puts "The file is OK!"
